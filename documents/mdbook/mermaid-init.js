@@ -17,7 +17,16 @@
     }
 
     const theme = lastThemeWasLight ? 'default' : 'dark';
-    mermaid.initialize({ startOnLoad: true, theme });
+    mermaid.initialize({ startOnLoad: false, theme });
+
+    document.querySelectorAll('code.language-mermaid').forEach((el) => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = el.textContent;
+        el.parentElement.replaceWith(div);
+    });
+
+    mermaid.run({ querySelector: '.mermaid' });
 
     // Simplest way to make mermaid re-render the diagrams in the new theme is via refreshing the page
 
