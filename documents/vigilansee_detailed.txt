@@ -1,0 +1,107 @@
+VIGILANSEE — DETAILED PROJECT DESCRIPTION
+==========================================
+
+
+WHAT IT IS
+----------
+VigilanSee is a server-side behavioral analysis service designed to accompany existing anti-cheat systems.
+It does not target cheats directly. Instead it allocates resources toward detecting hidden patterns in human
+behavior and habits. This approach allows it to detect not only cheating but also toxic behavior — examples
+include a player flashing their own teammates, or a group of friends repeatedly dealing damage to a specific
+player to avoid triggering automated bans.
+
+The goal is to bring a new perspective to server-side anti-cheat, stop normalizing kernel-level software and
+bloatware in general, and deliver a service that works for the community rather than imposing itself on it.
+
+
+CORE PHILOSOPHY
+---------------
+- No kernel-level software.
+- No bloatware.
+- No data associated with real player identities.
+- Privacy is the number one priority.
+- Completely against data selling or any shady data practices.
+- Even in the event of a data breach, no information can be traced back to any existing account.
+- All player data is encrypted and handled purely as patterns, never as identities.
+
+
+HOW THE PIPELINE WORKS
+-----------------------
+The pipeline is triggered when players start accumulating mass reports. From that point:
+
+1. SIGNAL COLLECTION
+   The system gathers all available signals on a reported player:
+   - Report volume
+   - Report messages and content
+   - Statistical anomalies
+   - Any other available behavioral data
+
+2. ML COMPONENT
+   A machine learning model processes all incoming signals and produces two outputs:
+   a) A RiskFactor value assigned to the player — the higher the value, the more resources are allocated
+      to that player's analysis.
+   b) An algorithm assignment — the ML selects which specific behavioral analysis algorithms will be run
+      on that player, based on the nature of the reports and detected patterns.
+
+   IMPORTANT DISCLAIMER: The ML does not and will not determine the fate of any player. Its sole purpose
+   is to more effectively assign specific algorithms for faster and more targeted analysis.
+
+   The ML learns on its own output. If it places a player correctly and the outcome confirms it, the model
+   can begin identifying trends and tendencies that humans cannot perceive, and improve its placement
+   accuracy over time. Each game gets its own separate ML run so the model adapts to the specific game
+   it is analyzing.
+
+3. ALGORITHM LAYER
+   Behavioral analysis algorithms cover anything measurable: aim patterns, movement, positioning decisions,
+   interaction with teammates, and more. Running every algorithm on every player every frame across
+   potentially millions of concurrent players would be computationally equivalent to brute-forcing a long
+   hashed password — completely infeasible. The ML's algorithm assignment is what makes targeted and
+   scalable analysis possible.
+
+4. LAYERED ANALYSIS
+   Players pass through multiple layers of analysis progressively. Each layer can either close the case or
+   escalate to the next. The depth of analysis a player reaches is directly tied to their RiskFactor value.
+   A player will keep escalating through layers until they max out their RiskFactor ceiling.
+
+5. REPORT GENERATION
+   Once analysis is complete, a deterministic report is written on the player.
+
+   IMPORTANT DISCLAIMER: VigilanSee does not ban players. It produces reports and detection information
+   only. The decision on what action to take belongs entirely to the game studio.
+
+6. PIPELINE WITHOUT ML
+   The full pipeline functions without the ML component. It is just significantly slower and less targeted,
+   since without algorithm assignment the system runs broader analysis on every player. The ML exists
+   to make the pipeline precise and scalable.
+
+
+REPORT DELIVERY
+---------------
+Reports are delivered to the game studio. Studios can use them to:
+- Get more information on players they have already banned.
+- Identify players who are flying under the radar and have not yet been flagged by other systems.
+
+Report format is fully customizable depending on what the studio wants:
+- Full analytical breakdowns with all evidence and statistics.
+- Minimal output with only a confidence score or severity rating.
+- Anything in between.
+
+The goal is for VigilanSee to be a service that any game studio — large or small — can use or apply to
+their game, with output adapted entirely to their needs.
+
+
+PRIVACY MODEL
+-------------
+- All player data is encrypted at rest.
+- Data is never associated with a player name or account identity.
+- The system handles patterns only, never personal information.
+- In the event of a data breach, no data can be linked to any real account.
+- Data selling is strictly ruled out. Full stop.
+
+
+SCALABILITY NOTES
+-----------------
+- Each game gets a separate ML model run, allowing the model to adapt to game-specific behavior.
+- The ML's self-learning on its own output means detection quality improves over time per game.
+- RiskFactor-based resource allocation ensures computational resources scale proportionally to risk.
+- The algorithm assignment layer prevents the system from running unnecessary analysis on low-risk players.
