@@ -1,4 +1,9 @@
 # Summary
 
 - [Welcome](./welcome.md)
-- [Chapter 1](./chapter_1.md)
+
+# Mandatory
+
+- [Deployment](./deployment.md)
+- [Technology Environment](./technology_environment.md)
+- [Testing Policy](./testing_policy.md)
