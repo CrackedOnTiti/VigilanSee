@@ -1,0 +1,14 @@
+[book]
+authors = ["CrackedOnTiti"]
+language = "en"
+src = "src"
+title = "VigilanSee - Official Documentation"
+
+[build]
+build-dir = "build"
+
+[output.html]
+default-theme = "coal"
+additional-js = ["mermaid.min.js", "mermaid-init.js"]
+additional-css = ["custom.css"]
+
