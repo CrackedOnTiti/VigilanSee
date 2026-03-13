@@ -1,6 +1,3 @@
-[package]
-name = "vigilansee"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
+[workspace]
+resolver = "3"
+members = [ "vigilansee-ai","vigilansee-api", "vigilansee-core", "vigilansee-parser", "vigilansee-scorer"]
