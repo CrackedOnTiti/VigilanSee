@@ -3,9 +3,9 @@ name = "vigilansee"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-
-
 [workspace]
 resolver = "3"
 members = ["vigilansee-parser"]
+
+[workspace.dependencies]
+dotenvy = "0.15"
