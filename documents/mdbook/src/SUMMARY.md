@@ -2,6 +2,10 @@
 
 - [Welcome](./welcome.md)
 
+# Reference
+
+- [Tech Stack](./tech_stack.md)
+
 # Mandatory
 
 - [Deployment](./deployment.md)
