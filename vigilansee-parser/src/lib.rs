@@ -2,6 +2,9 @@ use s3::bucket::Bucket;
 use s3::creds::Credentials;
 use s3::error::S3Error;
 use s3::region::Region;
+
+
+/// Represents a CS2 demo file stored in B2 cloud storage
 pub struct DemFile {
     pub last_modified: String,
     pub e_tag: String,
@@ -9,7 +12,9 @@ pub struct DemFile {
     pub size: u64
 }
 
-pub async fn list_bucket() -> Result<(), S3Error> {
+/// Fetches B2 and returns a Vec<DemFile> with all the currunt available files, 
+/// in case of error returns S3Error
+pub async fn list_bucket() -> Result<Vec<DemFile>, S3Error> {
     dotenvy::dotenv().ok();
     let bucket_name = "VigilanSee-Dem";
     let region = Region::Custom {
@@ -19,13 +24,13 @@ pub async fn list_bucket() -> Result<(), S3Error> {
     let credentials = Credentials::default().unwrap();
     let bucket = Bucket::new(bucket_name, region, credentials)?;
     let list = bucket.list("".to_string(), None).await?;
+    let mut dem_files: Vec<DemFile> = Vec::new();
 
     if list.is_empty() {
         println!("Bucket: {} is empty", bucket_name);
-        return Ok(());
+        return Ok(dem_files);
     }
     
-    let mut dem_files: Vec<DemFile> = Vec::new();
     
     for bucket_result in list {
         for obj in bucket_result.contents {
@@ -46,7 +51,7 @@ pub async fn list_bucket() -> Result<(), S3Error> {
         println!("name {}\nsize {}\nlast modified {}\ne tag {}\n", dem.name, dem.size, dem.last_modified, dem.e_tag);
         val += 1; 
     }
-    Ok(())
+    Ok(dem_files)
 }
 
     #[cfg(test)]
