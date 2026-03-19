@@ -2,6 +2,12 @@ use s3::bucket::Bucket;
 use s3::creds::Credentials;
 use s3::error::S3Error;
 use s3::region::Region;
+pub struct DemFile {
+    pub last_modified: String,
+    pub e_tag: String,
+    pub name: String,
+    pub size: u64
+}
 
 pub async fn list_bucket() -> Result<(), S3Error> {
     dotenvy::dotenv().ok();
@@ -19,8 +25,26 @@ pub async fn list_bucket() -> Result<(), S3Error> {
         return Ok(());
     }
     
-    for dem in list {
-        println!("{:?}", dem);
+    let mut dem_files: Vec<DemFile> = Vec::new();
+    
+    for bucket_result in list {
+        for obj in bucket_result.contents {
+            if obj.key.ends_with(".dem") {
+                dem_files.push(DemFile {
+                    last_modified: obj.last_modified,
+                    e_tag: obj.e_tag.unwrap_or_default(),
+                    name: obj.key,
+                    size: obj.size
+                });
+            }
+        }
+    }
+
+    let mut val = 1;
+    for dem in &dem_files {
+        println!("Dem file n{}:\n", val); 
+        println!("name {}\nsize {}\nlast modified {}\ne tag {}\n", dem.name, dem.size, dem.last_modified, dem.e_tag);
+        val += 1; 
     }
     Ok(())
 }
