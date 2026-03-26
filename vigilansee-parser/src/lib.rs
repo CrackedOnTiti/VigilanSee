@@ -31,7 +31,6 @@ pub async fn list_bucket() -> Result<Vec<DemFile>, S3Error> {
         return Ok(dem_files);
     }
     
-    
     for bucket_result in list {
         for obj in bucket_result.contents {
             if obj.key.ends_with(".dem") {
@@ -46,13 +45,17 @@ pub async fn list_bucket() -> Result<Vec<DemFile>, S3Error> {
     }
 
     let mut val = 1;
-    for dem in &dem_files {
+    for dem in &dem_files {f
         println!("Dem file n{}:\n", val); 
         println!("name {}\nsize {}\nlast modified {}\ne tag {}\n", dem.name, dem.size, dem.last_modified, dem.e_tag);
         val += 1; 
     }
     Ok(dem_files)
 }
+
+
+/// TODO reception of vector and after CLI or whatever we select and pull necesary
+
 
     #[cfg(test)]
     mod tests {
