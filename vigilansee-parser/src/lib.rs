@@ -45,7 +45,7 @@ pub async fn list_bucket() -> Result<Vec<DemFile>, S3Error> {
     }
 
     let mut val = 1;
-    for dem in &dem_files {f
+    for dem in &dem_files {
         println!("Dem file n{}:\n", val); 
         println!("name {}\nsize {}\nlast modified {}\ne tag {}\n", dem.name, dem.size, dem.last_modified, dem.e_tag);
         val += 1; 
