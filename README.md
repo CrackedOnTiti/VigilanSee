@@ -10,9 +10,7 @@
 
 ---
 
-## What is VigilanSee?
-
-VigilanSee is a server-side Behavioral Intelligence Layer solution built to be game-agnostic. Instead of locking you into a specific data format or SDK, it lets game developers define their own game fields, objectives, and scoring logic — then sends that data to our detection engine via a simple REST API.
+`VigilanSee` is a server-side Behavioral Intelligence Layer solution built to be game-agnostic. Instead of locking you into a specific data format or SDK, it lets game developers define their own game fields, objectives, and scoring logic — then sends that data to our detection engine via a simple REST API.
 
 No client-side installation. No kernel access. No vendor lock-in.
 
@@ -27,17 +25,7 @@ No client-side installation. No kernel access. No vendor lock-in.
 
 ---
 
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Backend | Rust |
-| Database | PostgreSQL |
-| Containerization | Docker |
-
----
-
-## Team
+## Maintainers
 
 - **M3RICK**
 - **Alaidine**

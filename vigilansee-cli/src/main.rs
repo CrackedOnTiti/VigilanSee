@@ -3,7 +3,7 @@ use std::env;
 use color_eyre::Result;
 use crossterm::event;
 use ratatui::layout::{Constraint, Layout};
-use ratatui::{Frame, DefaultTerminal, TerminalOptions, Viewport};
+use ratatui::{Frame, DefaultTerminal};
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -17,9 +17,7 @@ fn main() -> Result<()> {
         result = Ok(())
     } else {
         color_eyre::install()?;
-        let terminal = ratatui::init_with_options(TerminalOptions {
-            viewport: Viewport::Inline(3),
-        });
+        let terminal = ratatui::init();
 
         result = run(terminal);
         ratatui::restore();
@@ -34,13 +32,12 @@ fn display_help() {
 }
 
 struct CliOptions {
-    full_screen: bool,
     display_help: bool,
 }
 
 impl CliOptions {
     pub const fn new() -> Self {
-        CliOptions { full_screen: false, display_help: false }
+        CliOptions { display_help: false }
     }
 
     pub fn parse(&mut self, args: &Vec<String>) {
@@ -48,14 +45,11 @@ impl CliOptions {
             if args[i] == "--help" || args[i] == "-h" {
                 self.display_help = true
             }
-            if args[i] == "--fullscreen" || args[i] == "-h" {
-                self.full_screen = true
-            }
         }
     }
 }
 
-/// Run the application
+/// Run the application.
 fn run(mut terminal: DefaultTerminal) -> Result<()> {
     loop {
         terminal.draw(|frame| render(frame))?;
