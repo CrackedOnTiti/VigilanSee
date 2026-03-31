@@ -4,3 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+
+[workspace]
+resolver = "3"
+members = [ "vigilansee-cli" ]
+
+[profile.release]
+lto = true
+
+[profile.release.package.vigilansee-cli]
+codegen-units = 1
+opt-level = "s"
+strip = true
