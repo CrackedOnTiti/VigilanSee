@@ -30,7 +30,7 @@ fn main() -> Result<()> {
 }
 
 fn display_help() {
-    println!("Hlep of vigilansee cli!!!!")
+    println!("Help of vigilansee cli!!!!")
 }
 
 struct CliOptions {
