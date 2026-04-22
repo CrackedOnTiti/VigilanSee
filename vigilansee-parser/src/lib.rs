@@ -75,8 +75,8 @@ pub async fn download_dem(target: DemFile) -> Result<(), S3Error> {
 
     let target_data = bucket.get_object(&target.name).await?;
     let target_bytes = &target_data.bytes();
-    tokio::fs::create_dir_all("../dem").await.unwrap();
-    tokio::fs::write(format!("../dem/{}", &target.name), &target_bytes).await.unwrap();
+    tokio::fs::create_dir_all("dem").await.unwrap();
+    tokio::fs::write(format!("dem/{}", &target.name), &target_bytes).await.unwrap();
     
     Ok(())
 }
