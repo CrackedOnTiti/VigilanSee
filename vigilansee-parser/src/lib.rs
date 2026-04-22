@@ -57,7 +57,10 @@ pub async fn list_bucket() -> Result<Vec<DemFile>, S3Error> {
 /// Downloads a file from B2 and returns void, 
 /// in case of error returns S3Error
 pub async fn download_all_dem(target: Vec<DemFile>) -> Result<(), S3Error> {
-    todo!()
+    for dem in target {
+        download_dem(dem).await?;
+    }
+    Ok(())
 }
 
 pub async fn download_dem(target: DemFile) -> Result<(), S3Error> {
