@@ -64,7 +64,21 @@ pub async fn download_all_dem(target: Vec<DemFile>) -> Result<(), S3Error> {
 }
 
 pub async fn download_dem(target: DemFile) -> Result<(), S3Error> {
-    todo!()
+    dotenvy::dotenv().ok();
+    let bucket_name = "VigilanSee-Dem";
+    let region = Region::Custom {
+        region: "eu-central-003".to_string(),
+        endpoint: "https://s3.eu-central-003.backblazeb2.com".to_string(),
+    };
+    let credentials = Credentials::default().unwrap();
+    let bucket = Bucket::new(bucket_name, region, credentials)?;
+
+    let target_data = bucket.get_object(&target.name).await?;
+    let target_bytes = &target_data.bytes();
+    tokio::fs::create_dir_all("../dem").await.unwrap();
+    tokio::fs::write(format!("../dem/{}", &target.name), &target_bytes).await.unwrap();
+    
+    Ok(())
 }
 
 
