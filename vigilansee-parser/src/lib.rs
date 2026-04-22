@@ -18,14 +18,14 @@ pub async fn list_bucket() -> Result<Vec<DemFile>, S3Error> {
     dotenvy::dotenv().ok();
     let bucket_name = "VigilanSee-Dem";
     let region = Region::Custom {
-    region: "eu-central-003".to_string(),
-    endpoint: "https://s3.eu-central-003.backblazeb2.com".to_string(),
+        region: "eu-central-003".to_string(),
+        endpoint: "https://s3.eu-central-003.backblazeb2.com".to_string(),
     };
     let credentials = Credentials::default().unwrap();
     let bucket = Bucket::new(bucket_name, region, credentials)?;
     let list = bucket.list("".to_string(), None).await?;
     let mut dem_files: Vec<DemFile> = Vec::new();
-
+    
     if list.is_empty() {
         println!("Bucket: {} is empty", bucket_name);
         return Ok(dem_files);
@@ -43,7 +43,7 @@ pub async fn list_bucket() -> Result<Vec<DemFile>, S3Error> {
             }
         }
     }
-
+    
     let mut val = 1;
     for dem in &dem_files {
         println!("Dem file n{}:\n", val); 
@@ -54,15 +54,35 @@ pub async fn list_bucket() -> Result<Vec<DemFile>, S3Error> {
 }
 
 
+/// Downloads a file from B2 and returns void, 
+/// in case of error returns S3Error
+pub async fn download_all_dem(target: Vec<DemFile>) -> Result<(), S3Error> {
+    todo!()
+}
+
+pub async fn download_dem(target: DemFile) -> Result<(), S3Error> {
+    todo!()
+}
+
+
+
 /// TODO reception of vector and after CLI or whatever we select and pull necesary
 
 
-    #[cfg(test)]
-    mod tests {
-        use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
     
-        #[tokio::test]
-        async fn test_list_bucket() {
-            list_bucket().await.unwrap();
-        }
+    #[tokio::test]
+    async fn test_list_bucket() {
+        list_bucket().await.unwrap();
     }
+    #[tokio::test]
+    async fn test_download_all_dem() {
+        download_all_dem(list_bucket().await.unwrap()).await.unwrap();
+    }
+    #[tokio::test]
+    async fn test_download_dem() {
+        download_dem(list_bucket().await.unwrap().into_iter().next().unwrap()).await.unwrap();
+    }
+}
