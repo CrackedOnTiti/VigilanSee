@@ -4,7 +4,7 @@ use s3::error::S3Error;
 use s3::region::Region;
 
 
-/// Represents a CS2 demo file stored in B2 cloud storage
+/// Represents a CS2 demo file stored in R2 cloud storage
 pub struct DemFile {
     pub last_modified: String,
     pub e_tag: String,
@@ -12,14 +12,14 @@ pub struct DemFile {
     pub size: u64
 }
 
-/// Fetches B2 and returns a Vec<DemFile> with all the currunt available files, 
+/// Fetches R2 and returns a Vec<DemFile> with all the currunt available files, 
 /// in case of error returns S3Error
 pub async fn list_bucket() -> Result<Vec<DemFile>, S3Error> {
     dotenvy::dotenv().ok();
     let bucket_name = "VigilanSee-Dem";
     let region = Region::Custom {
-        region: "eu-central-003".to_string(),
-        endpoint: "https://s3.eu-central-003.backblazeb2.com".to_string(),
+        region: "auto".to_string(),
+        endpoint: "https://dc7194b4e18cb86f95ae13e7f5725c5d.r2.cloudflarestorage.com".to_string(),
     };
     let credentials = Credentials::default().unwrap();
     let bucket = Bucket::new(bucket_name, region, credentials)?;
@@ -54,7 +54,7 @@ pub async fn list_bucket() -> Result<Vec<DemFile>, S3Error> {
 }
 
 
-/// Downloads a file from B2 and returns void, 
+/// Downloads all present .dem files from R2 and returns void, 
 /// in case of error returns S3Error
 pub async fn download_all_dem(target: Vec<DemFile>) -> Result<(), S3Error> {
     for dem in target {
@@ -63,12 +63,14 @@ pub async fn download_all_dem(target: Vec<DemFile>) -> Result<(), S3Error> {
     Ok(())
 }
 
+/// Downloads a file from R2 and returns void,
+/// in case of error returns S3Error
 pub async fn download_dem(target: DemFile) -> Result<(), S3Error> {
     dotenvy::dotenv().ok();
     let bucket_name = "VigilanSee-Dem";
     let region = Region::Custom {
-        region: "eu-central-003".to_string(),
-        endpoint: "https://s3.eu-central-003.backblazeb2.com".to_string(),
+        region: "auto".to_string(),
+        endpoint: "https://dc7194b4e18cb86f95ae13e7f5725c5d.r2.cloudflarestorage.com".to_string(),
     };
     let credentials = Credentials::default().unwrap();
     let bucket = Bucket::new(bucket_name, region, credentials)?;
