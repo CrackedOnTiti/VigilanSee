@@ -5,11 +5,12 @@ edition = "2024"
 
 [workspace]
 resolver = "3"
-members = ["vigilansee-parser"]
+members = ["vigilansee-parser", "vigilansee-api", "vigilansee-db"]
 
 [dependencies]
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres"] }
 tokio = { version = "1.50.0", features = ["full"] }
+vigilansee-api = { path = "vigilansee-api" }
+vigilansee-db = { path = "vigilansee-db" }
 
 
 [workspace.dependencies]
