@@ -1,0 +1,8 @@
+target/
+venv/
+dem/
+vigilansee-parser/dem/
+.env
+.git/
+documents/
+scripts/
