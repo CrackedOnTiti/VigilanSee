@@ -13,11 +13,13 @@ pub struct DemFile {
 }
 
 
+/// R2Client is the bucket struc that allows easier sharing of set bucket
 struct R2Client {
     bucket: Box<Bucket>
 }
 
 
+/// impl kind of the init for the struct
 impl R2Client {
     pub fn new() -> Result<Self, S3Error> {
         dotenvy::dotenv().ok();
@@ -90,8 +92,7 @@ impl R2Client {
     }
 }
 
-
-/// TODO reception of vector and after CLI or whatever we select and pull necesary
+// TODO: reception of vector and after CLI or whatever we select and pull necesary
 
 
 #[cfg(test)]
@@ -106,12 +107,10 @@ mod tests {
     async fn test_list_bucket() {
         R2Client::new().unwrap().list_bucket().await.unwrap();
     }
-    // #[tokio::test]
-    // async fn test_download_all_dem() {
-    //     download_all_dem(list_bucket().await.unwrap()).await.unwrap();
-    // }
-    // #[tokio::test]
-    // async fn test_download_dem() {
-    //     download_dem(list_bucket().await.unwrap().into_iter().next().unwrap()).await.unwrap();
-    // }
+    #[tokio::test]
+    async fn test_download_all_dem() {
+        let client = R2Client::new().unwrap();
+        let files = client.list_bucket().await.unwrap();
+        client.download_all_dem(files).await.unwrap();
+    }
 }
