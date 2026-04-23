@@ -1,0 +1,27 @@
+services:
+  vigilansee:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgresql://vigilansee:vigilansee@db:5432/vigilansee
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: vigilansee
+      POSTGRES_PASSWORD: vigilansee
+      POSTGRES_DB: vigilansee
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vigilansee"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
