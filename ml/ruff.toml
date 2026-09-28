@@ -1,0 +1,11 @@
+# Lint for ml/: `uvx ruff check ml` from the repo root.
+line-length = 110
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "W", "B", "UP", "SIM", "PL", "N", "RUF"]
+ignore = [
+    "PLR2004",  # magic values: thresholds live next to their comment
+    "PLR0913",  # a few helpers take the demo + several arrays
+    "RUF001", "RUF002", "RUF003",  # unicode arrows / ellipses in docs are intended
+]
