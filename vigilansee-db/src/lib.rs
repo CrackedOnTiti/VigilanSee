@@ -14,7 +14,7 @@ pub async fn init_db(pool: &PgPool) {
             id          SERIAL PRIMARY KEY,
             steam_id    VARCHAR(20) NOT NULL UNIQUE,
             risk_factor FLOAT NOT NULL DEFAULT 0.0
-        )"
+        )",
     )
     .execute(pool)
     .await

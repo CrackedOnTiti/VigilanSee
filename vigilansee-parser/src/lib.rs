@@ -3,21 +3,18 @@ use s3::creds::Credentials;
 use s3::error::S3Error;
 use s3::region::Region;
 
-
 /// Represents a CS2 demo file stored in R2 cloud storage
 pub struct DemFile {
     pub last_modified: String,
     pub e_tag: String,
     pub name: String,
-    pub size: u64
+    pub size: u64,
 }
-
 
 /// R2Client is the bucket struc that allows easier sharing of set bucket
 struct R2Client {
-    bucket: Box<Bucket>
+    bucket: Box<Bucket>,
 }
-
 
 /// impl kind of the init for the struct
 impl R2Client {
@@ -25,15 +22,17 @@ impl R2Client {
         dotenvy::dotenv().ok();
         let bucket_name = "VigilanSee-Dem";
         let region = Region::Custom {
-        region: "auto".to_string(),
-        endpoint: "https://dc7194b4e18cb86f95ae13e7f5725c5d.r2.cloudflarestorage.com".to_string(),
+            region: "auto".to_string(),
+            endpoint: "https://dc7194b4e18cb86f95ae13e7f5725c5d.r2.cloudflarestorage.com"
+                .to_string(),
         };
         let credentials = Credentials::default().unwrap();
-        Ok(R2Client { bucket: Bucket::new(bucket_name, region, credentials)?})
+        Ok(R2Client {
+            bucket: Bucket::new(bucket_name, region, credentials)?,
+        })
     }
 
-
-    /// Fetches R2 and returns a Vec<DemFile> with all the currunt available files, 
+    /// Fetches R2 and returns a Vec<DemFile> with all the currunt available files,
     /// in case of error returns S3Error
     pub async fn list_bucket(&self) -> Result<Vec<DemFile>, S3Error> {
         let bucket = &self.bucket;
@@ -52,7 +51,7 @@ impl R2Client {
                         last_modified: obj.last_modified,
                         e_tag: obj.e_tag.unwrap_or_default(),
                         name: obj.key,
-                        size: obj.size
+                        size: obj.size,
                     });
                 }
             }
@@ -60,15 +59,17 @@ impl R2Client {
 
         let mut val = 1;
         for dem in &dem_files {
-            println!("Dem file n{}:\n", val); 
-            println!("name {}\nsize {}\nlast modified {}\ne tag {}\n", dem.name, dem.size, dem.last_modified, dem.e_tag);
-            val += 1; 
+            println!("Dem file n{}:\n", val);
+            println!(
+                "name {}\nsize {}\nlast modified {}\ne tag {}\n",
+                dem.name, dem.size, dem.last_modified, dem.e_tag
+            );
+            val += 1;
         }
         Ok(dem_files)
     }
 
-
-    /// Downloads all present .dem files from R2 and returns void, 
+    /// Downloads all present .dem files from R2 and returns void,
     /// in case of error returns S3Error
     pub async fn download_all_dem(&self, target: Vec<DemFile>) -> Result<(), S3Error> {
         for dem in target {
@@ -76,7 +77,6 @@ impl R2Client {
         }
         Ok(())
     }
-
 
     /// Downloads a file from R2 and returns void,
     /// in case of error returns S3Error
@@ -86,7 +86,9 @@ impl R2Client {
         let target_data = bucket.get_object(&target.name).await?;
         let target_bytes = &target_data.bytes();
         tokio::fs::create_dir_all("dem").await.unwrap();
-        tokio::fs::write(format!("dem/{}", &target.name), &target_bytes).await.unwrap();
+        tokio::fs::write(format!("dem/{}", &target.name), &target_bytes)
+            .await
+            .unwrap();
 
         Ok(())
     }
@@ -94,11 +96,10 @@ impl R2Client {
 
 // TODO: reception of vector and after CLI or whatever we select and pull necesary
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_impl_r2_client() {
         R2Client::new().unwrap();
