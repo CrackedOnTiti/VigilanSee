@@ -1,4 +1,5 @@
 """Shared building blocks: one Demo object, parsed lazily and shared by every measurement vector."""
+import datetime as dt
 import re
 from collections.abc import Callable
 from pathlib import Path
@@ -23,6 +24,9 @@ class Demo:
         self.path = path
         self.match = path.parent.name
         self.map_game = re.sub(r"-p\d+$", "", path.stem)  # -p1/-p2 = same map split in two files
+        # Day the match was played = the .dem file's date, kept by 7z and `rsync -a` (a plain `cp` resets it).
+        # Recorded at the end of the map: a late match can show the next day (UTC).
+        self.played_on = dt.datetime.fromtimestamp(path.stat().st_mtime, dt.UTC).date().isoformat()
         self.parser = DemoParser(str(path))
         self._cache: dict = {}
 

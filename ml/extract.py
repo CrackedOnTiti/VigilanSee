@@ -6,6 +6,10 @@
 
 Usage: uv run ml/extract.py [demos_dir] [--force] [--only VECTOR]   (default: data/demos)
        --only strafe   (re)compute one vector and merge its columns into the existing fingerprints
+
+Writes data/fingerprints/<match>__<demo>.csv: one row per player (SteamID64, name, team, match,
+map_game, demo, played_on) + one column per feature. Demos already extracted are skipped unless --force,
+so new demos can be added incrementally — and a .dem can be deleted once extracted to save disk.
 """
 import argparse
 import time
@@ -27,7 +31,8 @@ def fingerprint(demo: Demo) -> pd.DataFrame:
     for name, extract in VECTORS.items():
         parts.append(extract(demo).add_prefix(f"{name}."))
     table = pd.concat(parts, axis=1).reindex(demo.roster().index)  # drop non-players (coaches…)
-    return table.assign(match=demo.match, map_game=demo.map_game, demo=demo.path.name)
+    return table.assign(match=demo.match, map_game=demo.map_game, demo=demo.path.name,
+                        played_on=demo.played_on)
 
 
 def output_path(dem: Path) -> Path:

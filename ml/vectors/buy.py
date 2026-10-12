@@ -1,4 +1,8 @@
-"""Buy vector: how a player shops during freeze time, order and speed of purchases.
+"""Buy vector: how a player shops during freeze time — order and speed of purchases.
+
+Partly driven by binds stored in the account's Steam cloud config: a friend playing on your
+account may inherit them. Strong for ban evasion (the person brings their config), weaker for
+account sharing — always report it separately from behaviour (vectors/habits.py).
 """
 import pandas as pd
 
