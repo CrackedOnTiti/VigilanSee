@@ -40,8 +40,10 @@ Flags (off by default: without them the output above is unchanged):
                   buhlmann (one K per feature, measured on the profile data). inf = the global profile.
   --strict        no leak: the query's match leaves EVERY candidate's profile, and z-scoring and the
                   shrinkage prior are measured without it (past_trials already works this way)
+  --map-centred   with --strict: every feature minus its population average on that map, measured on the
+                  profile data only (also applies to the chronological rows)
 
-Usage: uv run ml/evaluate.py [vectors] [--score own] [--context-k K] [--strict]
+Usage: uv run ml/evaluate.py [vectors] [--score own] [--context-k K] [--strict] [--map-centred]
        e.g. habits | habits,buy   (default: habits,buy)
 """
 import argparse
@@ -157,6 +159,15 @@ def map_names(index: pd.MultiIndex) -> np.ndarray:
     return index.get_level_values(1).str.rsplit("-", n=1).str[-1].to_numpy()
 
 
+def map_centred(features: pd.DataFrame, profile: np.ndarray) -> pd.DataFrame:
+    """Every row minus the average of its map over the `profile` rows only. A map (or feature) those rows
+    never saw falls back on their overall average."""
+    maps = map_names(features.index)
+    rows = features[profile]
+    means = rows.groupby(maps[profile]).mean().reindex(maps).fillna(rows.mean())
+    return features - means.to_numpy()
+
+
 def map_cells(z: pd.DataFrame, players: pd.Index, prior: np.ndarray) -> Cells:
     """Every player's (player, map) cell: mean of his maps there, and their variance through shrink()."""
     groups = z.groupby([z.index.get_level_values(0), map_names(z.index)])
@@ -243,26 +254,28 @@ def trials(z: pd.DataFrame, own_rows: OwnRows, scoring: str = DEFAULT_SCORING,
 
 
 def held_out_trials(features: pd.DataFrame, match_of: pd.Series, own_rows: OwnRows,
-                    scoring: str = DEFAULT_SCORING, context: Context | None = None) -> list[Trial]:
+                    scoring: str = DEFAULT_SCORING, context: Context | None = None, *,
+                    centred: bool = False) -> list[Trial]:
     """trials() without leaks, on raw features (--strict): for each query match, every candidate's profile,
     the z-scoring and the prior come from maps outside that match. `own_rows` masks refer to `features`.
-    A candidate with no map left has no profile for that query."""
+    A candidate with no map left has no profile for that query. `centred`: map_centred() in each fold."""
     matches = features.index.get_level_values(1).map(match_of).to_numpy()
     map_at = map_names(features.index)
     results = []
     for match in pd.unique(matches):
         outside = matches != match
-        standard = past_standard(features[outside])
+        rows = map_centred(features, outside) if centred else features
+        standard = past_standard(rows[outside])
         if standard is None:
             continue
         mean, std, prior = standard
-        z = ((features[mean.index] - mean) / std).fillna(0)
+        z = ((rows[mean.index] - mean) / std).fillna(0)
         means, variances = profiles(z[outside], prior)
         row_of = {player: i for i, player in enumerate(means.index)}
         maps = z.to_numpy()
         if context:
             cells = map_cells(z[outside], means.index, prior)
-            k = context.per_feature(features[outside], mean.index)
+            k = context.per_feature(rows[outside], mean.index)
         for q in np.flatnonzero(~outside):
             player, map_game = z.index[q]
             own = own_rows(player, map_game)
@@ -343,29 +356,35 @@ def past_standard(past: pd.DataFrame) -> Standard | None:
 
 
 def past_trials(features: pd.DataFrame, days: np.ndarray, pick: Pick, scoring: str,
-                context: Context | None = None) -> list[Trial]:
+                context: Context | None = None, *, centred: bool = False) -> list[Trial]:
     """Chronological trials on raw features: for each query map, every profile — the true player's
     included — is built only from the maps `pick` keeps among those played before the query's day, and
     standardisation and shrinkage prior come from past maps too: nothing from the future leaks in."""
     standards: dict[np.datetime64, Standard | None] = {}
     map_at = map_names(features.index)
     day_cells: dict[np.datetime64, tuple[Cells, np.ndarray]] = {}
+    day_rows: dict[np.datetime64, pd.DataFrame] = {}
     results = []
     for q, (player, map_game) in enumerate(features.index):
         day, history = days[q], pick(days[q])
+        if day not in day_rows:
+            day_rows[day] = map_centred(features, days < day) if centred else features
+        rows = day_rows[day]
+        if centred:
+            history = rows.loc[history.index]
         if day not in standards:
-            standards[day] = past_standard(features[days < day])
+            standards[day] = past_standard(rows[days < day])
         if standards[day] is None or player not in history.index.get_level_values(0):
             continue
         mean, std, prior = standards[day]
         z = ((history[mean.index] - mean) / std).fillna(0)
         means, variances = profiles(z, prior)
-        query = ((features.iloc[q][mean.index] - mean) / std).fillna(0).to_numpy()
+        query = ((rows.iloc[q][mean.index] - mean) / std).fillna(0).to_numpy()
         m, v = means.to_numpy(), variances
         if context:
             if day not in day_cells:
                 day_cells[day] = (map_cells(z, means.index, prior),
-                                  context.per_feature(features[days < day], mean.index))
+                                  context.per_feature(rows[days < day], mean.index))
             cells, k = day_cells[day]
             m, v = with_context(m, v, cells.get(map_at[q]), k)
         distances = score(m, v, query, scoring)
@@ -414,20 +433,22 @@ def in_a_row(match_trials: list[Trial], days_of: dict[str, np.datetime64], n: in
 
 
 def chronological_rows(features: pd.DataFrame, days: np.ndarray, match_of: pd.Series, scoring: str,
-                       context: Context | None = None) -> dict:
+                       context: Context | None = None, *, centred: bool = False) -> dict:
     """The prior art's protocol on our data: every row uses only maps played before the query."""
     f = features
-    every_past_map = past_trials(f, days, maps_between(f, days, 1, TIME_GAPS["> 90"][1]), scoring, context)
+    every_past_map = past_trials(f, days, maps_between(f, days, 1, TIME_GAPS["> 90"][1]), scoring, context,
+                                 centred=centred)
     matches = per_match(every_past_map, match_of)
     rows = {"past: all maps": every_past_map, "past: whole match": matches}
     days_of = dict(zip(f.index.get_level_values(1), days, strict=True))
     for n in STREAKS:
         rows[f"past: {n} matches in a row"] = in_a_row(matches, days_of, n)
     for k in HISTORY_SIZES:
-        rows[f"past: last {k} maps"] = past_trials(f, days, latest_maps(f, days, k), scoring, context)
+        rows[f"past: last {k} maps"] = past_trials(f, days, latest_maps(f, days, k), scoring, context,
+                                                   centred=centred)
     for name, (lo, hi) in TIME_GAPS.items():
         rows[f"past: {name} days before"] = past_trials(f, days, maps_between(f, days, lo, hi), scoring,
-                                                        context)
+                                                        context, centred=centred)
     return {name: summary(results) for name, results in rows.items() if results}
 
 
@@ -437,7 +458,8 @@ def transfers(who: pd.DataFrame) -> list[str]:
     return [f"{name}: {', '.join(sorted(t))}" for name, t in teams.items() if len(t) > 1]
 
 
-def main(vectors: list[str], scoring: str, context: Context | None = None, strict: bool = False) -> None:
+def main(vectors: list[str], scoring: str, context: Context | None = None, strict: bool = False,
+         centred: bool = False) -> None:
     features, match_of, who = load_fingerprints(vectors)
     z = standardise(features)
     days = who["played_on"].to_numpy(dtype="datetime64[D]")
@@ -447,11 +469,13 @@ def main(vectors: list[str], scoring: str, context: Context | None = None, stric
 
     def run(own: OwnRows) -> list[Trial]:
         if strict:
-            return held_out_trials(features.loc[:, z.columns], match_of, own, scoring, context)
+            return held_out_trials(features.loc[:, z.columns], match_of, own, scoring, context,
+                                   centred=centred)
         return trials(z, own, scoring, context, features)
 
     rows = {"all maps (leave-one-match-out)": summary(run(other_matches(z, match_of)))}
-    rows |= chronological_rows(features.loc[:, z.columns], days, match_of, scoring, context)
+    rows |= chronological_rows(features.loc[:, z.columns], days, match_of, scoring, context,
+                               centred=centred)
     for name, own in {"cross-event": other_event(z, match_of), "cross-team": other_team(z, who)}.items():
         results = run(own)
         if results:
@@ -473,7 +497,10 @@ if __name__ == "__main__":
     cli.add_argument("--score", choices=SCORINGS, default=DEFAULT_SCORING, help="default: %(default)s")
     cli.add_argument("--context-k", help="per-map profiles: a number, inf or buhlmann (default: global only)")
     cli.add_argument("--strict", action="store_true", help="keep the query's match out of everything")
+    cli.add_argument("--map-centred", action="store_true", help="remove each map's average (needs --strict)")
     args = cli.parse_args()
+    if args.map_centred and not args.strict:
+        cli.error("--map-centred needs --strict")
     k = args.context_k
     context = None if k is None else Context(buhlmann_k if k == "buhlmann" else float(k))
-    main(args.vectors, args.score, context, args.strict)
+    main(args.vectors, args.score, context, args.strict, args.map_centred)

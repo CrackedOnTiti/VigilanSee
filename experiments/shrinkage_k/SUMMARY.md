@@ -258,3 +258,126 @@ Paired bootstrap, 1000 resamples, seed 0. Differences are in points, against the
 - **Missing rosters:** 18 of 161 demos have fewer than 10 players in their fingerprints. Without the demos I can't tell why.
 - **Unidentified causes:** reference differences 2–5 above are listed from reading the code, not measured one by one.
 - **Environment:** `uv` wasn't installed, so it ran from a temporary install with CPython 3.13.18. `pandas` and `numpy` aren't pinned in his scripts.
+
+
+## Map-centring vs per-map shrinkage
+
+Reproduce from the repo root with `uv run experiments/shrinkage_k/centring.py`. It writes `centring.csv`, `centring_bootstrap.csv` and `centring_k.csv`. A second run gave byte-identical files. This section answers the "possibly simpler alternative" caveat above.
+
+Setup: habits,buy, leak-free (`--strict`; chronological rows are leak-free by construction), `PRIOR_MAPS = 10`, paired bootstrap with 1000 resamples and seed 0.
+
+- **Map-centring** (new `--map-centred` flag) subtracts each feature's population average on that map, then z-scores. The averages come from profile data only, recomputed for each held-out match and each chronological query day.
+- **Centred + Straub** re-estimates k on the centred data in every fold.
+
+### Do per-player map profiles add anything on top of map-centring?
+
+**Yes, a small amount.** Compared with centring alone, adding per-player map profiles improves AUC, but detection only partly:
+
+- **AUC:** with Straub, the gain is established on all three rows, by match and by player (+0.29 overall, +0.20 chronological, +0.32 cross-team). With k = 2 it is established overall and chronologically, with no change on cross-team.
+- **Detection:** the gain is established only overall with k = 2 (+1.9 points). With Straub it is +1.2 points overall, established by player but not by match. It isn't established on chronological or cross-team rows.
+
+**The reverse doesn't hold: centring adds nothing on top of per-map profiles.** Every interval includes 0 except one, and that one is a loss (centred + Straub vs Straub, cross-team AUC by match, -0.63).
+
+**Centring alone isn't an established improvement.** It gives +0.07 AUC and +1.5 points of detection overall, and both intervals include 0. Cross-team, it lowers AUC by 0.72 by match (interval excludes 0; by player it includes 0) and detection by 6.9 points (includes 0).
+
+The leak-free centred row reproduces `effects.py`'s map-centred figures (88.9% and 0.9776 vs 89% and 0.978), so the leak wasn't behind them.
+
+**Recommendation unchanged:** per-map profiles with Bühlmann-Straub k, without centring. Adding centring to per-map profiles brings no established benefit, and its one established effect is a loss in cross-team AUC.
+
+### Results
+
+| Configuration | Overall AUC | Overall detect@5% | Chronological AUC | Chronological detect@5% | Cross-team AUC | Cross-team detect@5% |
+|---|---|---|---|---|---|---|
+| global | 0.9769 | 87.4% | 0.9638 | 80.7% | 0.9238 | 63.6% |
+| centred | 0.9776 | 88.9% | 0.9638 | 82.0% | 0.9166 | 56.7% |
+| k=2 | 0.9811 | 90.6% | 0.9663 | 81.0% | 0.9212 | 65.7% |
+| Straub | 0.9813 | 90.2% | 0.9672 | 82.8% | 0.9260 | 68.7% |
+| centred + k=2 | 0.9808 | 90.7% | 0.9659 | 82.1% | 0.9166 | 63.3% |
+| centred + Straub | 0.9805 | 90.1% | 0.9658 | 82.6% | 0.9198 | 60.8% |
+
+### Paired bootstrap: per-player map profiles on top of centring
+
+Differences in points, with 95% intervals.
+
+| Comparison | Row | Δ AUC by match | Δ AUC by player | Δ detect@5% by match | Δ detect@5% by player |
+|---|---|---|---|---|---|
+| centred + k=2 vs centred | overall | +0.32 (+0.15, +0.50) | +0.32 (+0.19, +0.46) | +1.9 (+0.2, +3.3) | +1.9 (+0.3, +3.4) |
+| centred + k=2 vs centred | chronological | +0.20 (+0.07, +0.34) | +0.20 (+0.09, +0.33) | +0.1 (-1.4, +2.6) | +0.1 (-1.4, +2.8) |
+| centred + k=2 vs centred | cross-team | +0.00 (-0.44, +0.45) | +0.00 (-0.72, +0.67) | +6.6 (-3.4, +15.3) | +6.6 (-6.7, +14.6) |
+| centred + Straub vs centred | overall | +0.29 (+0.19, +0.39) | +0.29 (+0.21, +0.38) | +1.2 (-0.1, +2.3) | +1.2 (+0.0, +2.3) |
+| centred + Straub vs centred | chronological | +0.20 (+0.12, +0.29) | +0.20 (+0.13, +0.27) | +0.6 (-0.4, +2.7) | +0.6 (-0.3, +2.4) |
+| centred + Straub vs centred | cross-team | +0.32 (+0.05, +0.60) | +0.32 (+0.02, +0.69) | +4.1 (-0.2, +11.5) | +4.1 (-0.2, +11.8) |
+
+### Paired bootstrap: everything against the global profile
+
+| Comparison | Row | Δ AUC by match | Δ AUC by player | Δ detect@5% by match | Δ detect@5% by player |
+|---|---|---|---|---|---|
+| centred vs global | overall | +0.07 (-0.04, +0.20) | +0.07 (-0.06, +0.20) | +1.5 (-0.9, +4.0) | +1.5 (-0.6, +3.8) |
+| centred vs global | chronological | +0.00 (-0.17, +0.18) | +0.00 (-0.20, +0.20) | +1.3 (-1.6, +3.5) | +1.3 (-1.6, +3.9) |
+| centred vs global | cross-team | -0.72 (-1.31, -0.11) | -0.72 (-1.61, +0.15) | -6.9 (-16.4, +5.4) | -6.9 (-14.2, +4.4) |
+| k=2 vs global | overall | +0.41 (+0.20, +0.64) | +0.41 (+0.25, +0.57) | +3.2 (+0.7, +5.9) | +3.2 (+1.1, +5.8) |
+| k=2 vs global | chronological | +0.25 (+0.08, +0.41) | +0.25 (+0.12, +0.38) | +0.3 (-1.3, +4.1) | +0.3 (-1.2, +3.7) |
+| k=2 vs global | cross-team | -0.26 (-0.69, +0.16) | -0.26 (-1.16, +0.47) | +2.2 (-5.5, +13.7) | +2.2 (-10.5, +13.9) |
+| Straub vs global | overall | +0.44 (+0.29, +0.63) | +0.44 (+0.32, +0.56) | +2.8 (+0.6, +5.5) | +2.8 (+0.7, +5.1) |
+| Straub vs global | chronological | +0.33 (+0.21, +0.46) | +0.33 (+0.24, +0.43) | +2.1 (+0.2, +4.7) | +2.1 (+0.3, +4.4) |
+| Straub vs global | cross-team | +0.22 (-0.13, +0.59) | +0.22 (-0.28, +0.74) | +5.1 (-3.2, +16.9) | +5.1 (-4.9, +15.9) |
+| centred + k=2 vs global | overall | +0.39 (+0.18, +0.65) | +0.39 (+0.20, +0.56) | +3.3 (+0.6, +5.9) | +3.3 (+0.9, +5.9) |
+| centred + k=2 vs global | chronological | +0.21 (-0.02, +0.43) | +0.21 (-0.02, +0.42) | +1.4 (-1.0, +4.3) | +1.4 (-1.3, +4.3) |
+| centred + k=2 vs global | cross-team | -0.72 (-1.49, +0.04) | -0.72 (-2.09, +0.39) | -0.2 (-12.4, +11.2) | -0.2 (-16.8, +12.2) |
+| centred + Straub vs global | overall | +0.36 (+0.21, +0.57) | +0.36 (+0.22, +0.50) | +2.7 (-0.0, +5.6) | +2.7 (+0.4, +5.0) |
+| centred + Straub vs global | chronological | +0.20 (+0.00, +0.42) | +0.20 (-0.03, +0.41) | +1.9 (-0.9, +4.7) | +1.9 (-0.9, +4.7) |
+| centred + Straub vs global | cross-team | -0.40 (-1.06, +0.24) | -0.40 (-1.28, +0.40) | -2.7 (-9.6, +9.1) | -2.7 (-10.3, +9.9) |
+
+### Paired bootstrap: shrinkage against centring, and centring on top of shrinkage
+
+| Comparison | Row | Δ AUC by match | Δ AUC by player | Δ detect@5% by match | Δ detect@5% by player |
+|---|---|---|---|---|---|
+| k=2 vs centred | overall | +0.35 (+0.15, +0.54) | +0.35 (+0.18, +0.51) | +1.7 (-0.2, +3.5) | +1.7 (-0.0, +3.7) |
+| k=2 vs centred | chronological | +0.25 (+0.05, +0.46) | +0.25 (+0.04, +0.47) | -1.0 (-3.0, +3.2) | -1.0 (-3.3, +3.1) |
+| k=2 vs centred | cross-team | +0.47 (-0.14, +1.01) | +0.47 (-0.19, +1.36) | +9.0 (-0.7, +19.0) | +9.0 (-3.0, +17.2) |
+| Straub vs centred | overall | +0.37 (+0.21, +0.53) | +0.37 (+0.23, +0.52) | +1.3 (-0.4, +3.1) | +1.3 (-0.6, +3.3) |
+| Straub vs centred | chronological | +0.33 (+0.16, +0.53) | +0.33 (+0.15, +0.55) | +0.8 (-1.0, +4.0) | +0.8 (-1.4, +3.8) |
+| Straub vs centred | cross-team | +0.95 (+0.32, +1.50) | +0.95 (+0.06, +1.96) | +12.0 (+1.6, +21.5) | +12.0 (-1.9, +20.9) |
+| centred + k=2 vs k=2 | overall | -0.02 (-0.10, +0.07) | -0.02 (-0.10, +0.07) | +0.1 (-1.1, +1.4) | +0.1 (-1.2, +1.4) |
+| centred + k=2 vs k=2 | chronological | -0.04 (-0.20, +0.11) | -0.04 (-0.22, +0.12) | +1.1 (-2.2, +3.3) | +1.1 (-2.1, +3.5) |
+| centred + k=2 vs k=2 | cross-team | -0.46 (-0.94, +0.06) | -0.46 (-0.99, +0.11) | -2.4 (-9.3, +3.4) | -2.4 (-9.0, +4.0) |
+| centred + Straub vs Straub | overall | -0.08 (-0.17, +0.02) | -0.08 (-0.16, +0.02) | -0.1 (-1.9, +1.5) | -0.1 (-1.9, +1.8) |
+| centred + Straub vs Straub | chronological | -0.13 (-0.31, +0.03) | -0.13 (-0.34, +0.06) | -0.1 (-3.0, +1.9) | -0.1 (-3.0, +2.2) |
+| centred + Straub vs Straub | cross-team | -0.63 (-1.11, -0.06) | -0.63 (-1.34, +0.10) | -7.9 (-11.5, +0.8) | -7.9 (-11.4, +3.3) |
+
+### k before and after centring
+
+Computed on all maps for display; the runs re-estimate k in every fold.
+
+| Feature | Straub k | Straub k on centred data |
+|---|---|---|
+| habits.jumps_per_min | 0.56 | 1.60 |
+| habits.back_frac | 1.91 | 3.48 |
+| habits.walk_frac | 2.10 | 4.28 |
+| habits.switch_per_min | 2.37 | 3.08 |
+| habits.w_plus_strafe_frac | 2.57 | 6.25 |
+| habits.strafe_only_frac | 2.99 | 5.94 |
+| habits.crouch_per_min | 3.96 | 6.10 |
+| buy.rank_flash | 5.20 | 5.06 |
+| habits.knife_out_frac | 6.22 | 17.40 |
+| habits.use_per_min | 6.91 | 17.29 |
+| habits.reload_per_min | 10.07 | 9.48 |
+| buy.first_delay_s | 10.58 | 8.93 |
+| buy.rank_smoke | 10.70 | 11.88 |
+| buy.rank_fire | 10.74 | 10.65 |
+| habits.inspect_per_min | 17.59 | 24.60 |
+| habits.clip_at_reload | 20.06 | 25.13 |
+| buy.rank_he | 37.01 | 51.90 |
+| buy.rank_defuser | inf | inf |
+| buy.rank_armor | inf | inf |
+| buy.gap_s | inf | inf |
+
+Centring raises k for the movement features most (`jumps_per_min` 0.56 → 1.60, `w_plus_strafe_frac` 2.57 → 6.25), because the shared map effect is gone. What's left is the per-player part of the map effect. It is still there, which fits the result above. Most buy and reload features barely move.
+
+### Caveats for this section
+
+- **Many intervals:** 33 comparisons, each with 4 intervals, with no multiple-comparison correction. Treat intervals that only just exclude 0 as weak evidence, including several above.
+- **Bootstrap scope:** as above, queries are resampled but profiles aren't refitted.
+- **Cross-team** still rests on 9 players and 178 queries. By-player intervals there use only 9 units.
+- **Straub** was added after the first grid, so it wasn't chosen by the rule set in advance.
+- **Map averages depend on who plays each map:** they are row-weighted, so a map played mostly by a few teams carries those teams' habits. That may be why centring hurts cross-team queries, but I didn't test it.
