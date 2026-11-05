@@ -1,0 +1,212 @@
+:root {
+  --bg: #161512;
+  --panel: #262421;
+  --panel-hover: #302e2b;
+  --border: #3c3a37;
+  --text: #bababa;
+  --text-strong: #e6e6e6;
+  --muted: #8b8885;
+  --brand: #e10f1a;
+  --link: #5a9ee8;
+  font-family: "Noto Sans", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
+/* ---------- Header ---------- */
+
+.site-header {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  height: 56px;
+  padding: 0 1.5rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-strong);
+  font-size: 1.35rem;
+}
+
+.brand:hover {
+  text-decoration: none;
+}
+
+.brand strong {
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.site-header nav {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.site-header nav a {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.site-header nav a:hover {
+  color: var(--text-strong);
+  text-decoration: none;
+}
+
+/* ---------- Layout ---------- */
+
+.layout {
+  flex: 1;
+  width: 100%;
+  max-width: 1100px;
+  margin: 1.5rem auto;
+  padding: 0 1.5rem;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.panel {
+  background: var(--panel);
+  border-radius: 4px;
+  padding: 1.75rem 2rem;
+}
+
+/* ---------- Welcome ---------- */
+
+.welcome h1 {
+  margin: 0 0 1rem;
+  color: var(--text-strong);
+  font-size: 1.75rem;
+  font-weight: 400;
+}
+
+.welcome p {
+  margin: 0 0 1rem;
+  max-width: 60ch;
+}
+
+.welcome .lead {
+  color: var(--text-strong);
+  font-size: 1.1rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  background: var(--panel-hover);
+  border: 1px solid var(--border);
+  color: var(--text-strong);
+  font-weight: 500;
+}
+
+.button:hover {
+  text-decoration: none;
+  background: var(--border);
+}
+
+.button.primary {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+.button.primary:hover {
+  background: #c00d17;
+}
+
+/* ---------- About ---------- */
+
+.about h2 {
+  margin: 0 0 1rem;
+  color: var(--text-strong);
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.about dl {
+  margin: 0;
+}
+
+.about dt {
+  color: var(--text-strong);
+  font-weight: 500;
+}
+
+.about dd {
+  margin: 0.15rem 0 1rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.about dd:last-child {
+  margin-bottom: 0;
+}
+
+/* ---------- Footer ---------- */
+
+.site-footer {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 760px) {
+  .layout {
+    grid-template-columns: 1fr;
+    padding: 0 0.75rem;
+  }
+
+  .panel {
+    padding: 1.25rem;
+  }
+
+  .site-header {
+    gap: 1rem;
+    padding: 0 0.75rem;
+  }
+}
