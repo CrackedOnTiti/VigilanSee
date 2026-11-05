@@ -1,1 +1,8 @@
 /target
+dem/
+.env
+venv/
+data/
+tmp/
+.env.*
+!.env.example

@@ -34,12 +34,23 @@ Rows:
   cross-event            profile from other tournaments only                            (patch / weeks)
   cross-team             profile from the player's old team, query with his new one     (person vs team)
 
-Usage: uv run ml/evaluate.py [vectors] [--score own]   e.g. habits | habits,buy   (default: habits,buy)
+Flags (off by default: without them the output above is unchanged):
+  --context-k K   per-map profiles: a query on map m is compared to each candidate's map-m profile, his
+                  global one pulled toward his maps on m with w = n / (n + K). K = a number, inf, or
+                  buhlmann (one K per feature, measured on the profile data). inf = the global profile.
+  --strict        no leak: the query's match leaves EVERY candidate's profile, and z-scoring and the
+                  shrinkage prior are measured without it (past_trials already works this way)
+  --map-centred   with --strict: every feature minus its population average on that map, measured on the
+                  profile data only (also applies to the chronological rows)
+
+Usage: uv run ml/evaluate.py [vectors] [--score own] [--context-k K] [--strict] [--map-centred]
+       e.g. habits | habits,buy   (default: habits,buy)
 """
 import argparse
 import itertools
 import re
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -63,6 +74,20 @@ GAP_CAP = 9.0  # one feature counts at most 3 of the player's own standard devia
 OwnRows = Callable[[str, str], np.ndarray | None]
 # pick(query day) -> the maps every profile may use for that query (chronological protocol)
 Pick = Callable[[np.datetime64], pd.DataFrame]
+# map name -> every candidate's cell on that map: mean, shrunk variance, number of maps
+Cells = dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]
+
+
+@dataclass(frozen=True)
+class Context:
+    """Per-map profiles (--context-k). k: one number, one per feature (Series), or a function measuring
+    one per feature on the raw profile data (buhlmann_k)."""
+    k: float | pd.Series | Callable[[pd.DataFrame], pd.Series]
+
+    def per_feature(self, rows: pd.DataFrame, columns: pd.Index) -> np.ndarray:
+        """k of every feature in `columns`; `rows` = the raw profile data a function k measures it on."""
+        k = self.k(rows) if callable(self.k) else self.k
+        return k.reindex(columns).to_numpy() if isinstance(k, pd.Series) else np.full(len(columns), float(k))
 
 
 def load_fingerprints(vectors: list[str]) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame]:
@@ -129,22 +154,139 @@ def score(means: np.ndarray, variances: np.ndarray, query: np.ndarray, scoring: 
     return np.sqrt(gaps.sum(axis=1))
 
 
-def trials(z: pd.DataFrame, own_rows: OwnRows, scoring: str = DEFAULT_SCORING) -> list[Trial]:
+def map_names(index: pd.MultiIndex) -> np.ndarray:
+    """Map of each (player, map_game) row: '<match>/vitality-vs-mouz-m2-dust2' → 'dust2'."""
+    return index.get_level_values(1).str.rsplit("-", n=1).str[-1].to_numpy()
+
+
+def map_centred(features: pd.DataFrame, profile: np.ndarray) -> pd.DataFrame:
+    """Every row minus the average of its map over the `profile` rows only. A map (or feature) those rows
+    never saw falls back on their overall average."""
+    maps = map_names(features.index)
+    rows = features[profile]
+    means = rows.groupby(maps[profile]).mean().reindex(maps).fillna(rows.mean())
+    return features - means.to_numpy()
+
+
+def map_cells(z: pd.DataFrame, players: pd.Index, prior: np.ndarray) -> Cells:
+    """Every player's (player, map) cell: mean of his maps there, and their variance through shrink()."""
+    groups = z.groupby([z.index.get_level_values(0), map_names(z.index)])
+    mean, var, size = groups.mean(), groups.var(), groups.size()
+    cells = {}
+    for name in size.index.get_level_values(1).unique():
+        n = size.xs(name, level=1).reindex(players, fill_value=0).to_numpy()
+        spread = var.xs(name, level=1).reindex(players).to_numpy()
+        cells[name] = (mean.xs(name, level=1).reindex(players).fillna(0).to_numpy(),
+                       shrink(spread, np.maximum(n, 1), prior), n)
+    return cells
+
+
+def own_cell(cells: Cells, name: str, i: int, mine: np.ndarray, prior: np.ndarray) -> tuple:
+    """The cell of map `name`, with player row i rebuilt from only `mine` (his allowed maps on it)."""
+    shape = (len(next(iter(cells.values()))[2]), mine.shape[1])
+    empty = (np.zeros(shape), np.ones(shape), np.zeros(shape[0], dtype=int))
+    mean, var, n = (c.copy() for c in cells.get(name, empty))
+    n[i] = len(mine)
+    if len(mine):
+        spread = mine.var(axis=0, ddof=1) if len(mine) > 1 else np.full(mine.shape[1], np.nan)
+        mean[i], var[i] = mine.mean(axis=0), shrink(spread[None, :], np.array([len(mine)]), prior)[0]
+    return mean, var, n
+
+
+def with_context(means: np.ndarray, variances: np.ndarray, cell: tuple | None,
+                 k: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Profiles for one map: global mean and variance blended with the cell, w = n / (n + k).
+    No cell (w = 0), or k = inf: the global profile, untouched."""
+    if cell is None:
+        return means, variances
+    cell_mean, cell_var, n = cell
+    n = n[:, None].astype(float)
+    w = np.divide(n, n + k, out=np.zeros(means.shape), where=(n > 0) & np.isfinite(k))
+    return w * cell_mean + (1 - w) * means, w * cell_var + (1 - w) * variances
+
+
+def buhlmann_k(rows: pd.DataFrame) -> pd.Series:
+    """Bühlmann credibility per feature on raw per-map rows: k = within-cell / between-cell variance over
+    (player, map) cells; inf when the map adds nothing. Scale-free, so raw values do (missing ones
+    skipped)."""
+    players, maps, ks = rows.index.get_level_values(0), map_names(rows.index), {}
+    for feature in rows.columns:
+        d = pd.DataFrame({"p": players, "m": maps, "x": rows[feature].to_numpy()}).dropna()
+        d = d[d.groupby("p")["x"].transform("size") >= 2]
+        cells = d.groupby(["p", "m"])["x"].agg(["mean", "var", "size"]).reset_index()
+        repeated = cells[cells["size"] >= 2]
+        if repeated.empty:
+            ks[feature] = np.inf
+            continue
+        within = np.average(repeated["var"], weights=repeated["size"] - 1)
+        gaps = cells["mean"] - cells["p"].map(d.groupby("p")["x"].mean())
+        between = np.average(gaps ** 2 - within / cells["size"], weights=cells["size"])
+        ks[feature] = within / between if between > 0 else np.inf
+    return pd.Series(ks)
+
+
+def trials(z: pd.DataFrame, own_rows: OwnRows, scoring: str = DEFAULT_SCORING,
+           context: Context | None = None, raw: pd.DataFrame | None = None) -> list[Trial]:
     """For each query map: (true player, distance from the map to every candidate profile).
     Other candidates' profiles use all their maps; the true player's uses only `own_rows`.
-    Each distance Series is named after its query map_game."""
+    Each distance Series is named after its query map_game.
+    With a `context`, every candidate is judged on his profile for the query's map (`raw` = unscaled
+    features, for a buhlmann k)."""
     prior = z.groupby(level=0).var().mean().to_numpy()
     means, variances = profiles(z, prior)
     row_of = {player: i for i, player in enumerate(means.index)}
     maps = z.to_numpy()
+    if context:
+        cells, map_at = map_cells(z, means.index, prior), map_names(z.index)
+        k = context.per_feature(z if raw is None else raw, z.columns)
     results = []
     for q, (player, map_game) in enumerate(z.index):
         own = own_rows(player, map_game)
         if own is None or not own.any():
             continue
         m, v = own_profile(means.to_numpy(), variances, row_of[player], maps[own], prior)
+        if context:
+            mine = maps[own & (map_at == map_at[q])]
+            m, v = with_context(m, v, own_cell(cells, map_at[q], row_of[player], mine, prior), k)
         distances = score(m, v, maps[q], scoring)
         results.append((player, pd.Series(distances, index=means.index, name=map_game)))
+    return results
+
+
+def held_out_trials(features: pd.DataFrame, match_of: pd.Series, own_rows: OwnRows,
+                    scoring: str = DEFAULT_SCORING, context: Context | None = None, *,
+                    centred: bool = False) -> list[Trial]:
+    """trials() without leaks, on raw features (--strict): for each query match, every candidate's profile,
+    the z-scoring and the prior come from maps outside that match. `own_rows` masks refer to `features`.
+    A candidate with no map left has no profile for that query. `centred`: map_centred() in each fold."""
+    matches = features.index.get_level_values(1).map(match_of).to_numpy()
+    map_at = map_names(features.index)
+    results = []
+    for match in pd.unique(matches):
+        outside = matches != match
+        rows = map_centred(features, outside) if centred else features
+        standard = past_standard(rows[outside])
+        if standard is None:
+            continue
+        mean, std, prior = standard
+        z = ((rows[mean.index] - mean) / std).fillna(0)
+        means, variances = profiles(z[outside], prior)
+        row_of = {player: i for i, player in enumerate(means.index)}
+        maps = z.to_numpy()
+        if context:
+            cells = map_cells(z[outside], means.index, prior)
+            k = context.per_feature(rows[outside], mean.index)
+        for q in np.flatnonzero(~outside):
+            player, map_game = z.index[q]
+            own = own_rows(player, map_game)
+            if own is None or not (own := own & outside).any():
+                continue
+            m, v = own_profile(means.to_numpy(), variances, row_of[player], maps[own], prior)
+            if context:
+                mine = maps[own & (map_at == map_at[q])]
+                m, v = with_context(m, v, own_cell(cells, map_at[q], row_of[player], mine, prior), k)
+            distances = score(m, v, maps[q], scoring)
+            results.append((player, pd.Series(distances, index=means.index, name=map_game)))
     return results
 
 
@@ -213,22 +355,39 @@ def past_standard(past: pd.DataFrame) -> Standard | None:
     return mean[kept], std[kept], prior[kept].to_numpy()
 
 
-def past_trials(features: pd.DataFrame, days: np.ndarray, pick: Pick, scoring: str) -> list[Trial]:
+def past_trials(features: pd.DataFrame, days: np.ndarray, pick: Pick, scoring: str,
+                context: Context | None = None, *, centred: bool = False) -> list[Trial]:
     """Chronological trials on raw features: for each query map, every profile — the true player's
     included — is built only from the maps `pick` keeps among those played before the query's day, and
     standardisation and shrinkage prior come from past maps too: nothing from the future leaks in."""
     standards: dict[np.datetime64, Standard | None] = {}
+    map_at = map_names(features.index)
+    day_cells: dict[np.datetime64, tuple[Cells, np.ndarray]] = {}
+    day_rows: dict[np.datetime64, pd.DataFrame] = {}
     results = []
     for q, (player, map_game) in enumerate(features.index):
         day, history = days[q], pick(days[q])
+        if day not in day_rows:
+            day_rows[day] = map_centred(features, days < day) if centred else features
+        rows = day_rows[day]
+        if centred:
+            history = rows.loc[history.index]
         if day not in standards:
-            standards[day] = past_standard(features[days < day])
+            standards[day] = past_standard(rows[days < day])
         if standards[day] is None or player not in history.index.get_level_values(0):
             continue
         mean, std, prior = standards[day]
-        means, variances = profiles(((history[mean.index] - mean) / std).fillna(0), prior)
-        query = ((features.iloc[q][mean.index] - mean) / std).fillna(0).to_numpy()
-        distances = score(means.to_numpy(), variances, query, scoring)
+        z = ((history[mean.index] - mean) / std).fillna(0)
+        means, variances = profiles(z, prior)
+        query = ((rows.iloc[q][mean.index] - mean) / std).fillna(0).to_numpy()
+        m, v = means.to_numpy(), variances
+        if context:
+            if day not in day_cells:
+                day_cells[day] = (map_cells(z, means.index, prior),
+                                  context.per_feature(rows[days < day], mean.index))
+            cells, k = day_cells[day]
+            m, v = with_context(m, v, cells.get(map_at[q]), k)
+        distances = score(m, v, query, scoring)
         results.append((player, pd.Series(distances, index=means.index, name=map_game)))
     return results
 
@@ -273,19 +432,23 @@ def in_a_row(match_trials: list[Trial], days_of: dict[str, np.datetime64], n: in
             for player, ds in by_player.items() for i in range(len(ds) - n + 1)]
 
 
-def chronological_rows(features: pd.DataFrame, days: np.ndarray, match_of: pd.Series, scoring: str) -> dict:
+def chronological_rows(features: pd.DataFrame, days: np.ndarray, match_of: pd.Series, scoring: str,
+                       context: Context | None = None, *, centred: bool = False) -> dict:
     """The prior art's protocol on our data: every row uses only maps played before the query."""
     f = features
-    every_past_map = past_trials(f, days, maps_between(f, days, 1, TIME_GAPS["> 90"][1]), scoring)
+    every_past_map = past_trials(f, days, maps_between(f, days, 1, TIME_GAPS["> 90"][1]), scoring, context,
+                                 centred=centred)
     matches = per_match(every_past_map, match_of)
     rows = {"past: all maps": every_past_map, "past: whole match": matches}
     days_of = dict(zip(f.index.get_level_values(1), days, strict=True))
     for n in STREAKS:
         rows[f"past: {n} matches in a row"] = in_a_row(matches, days_of, n)
     for k in HISTORY_SIZES:
-        rows[f"past: last {k} maps"] = past_trials(f, days, latest_maps(f, days, k), scoring)
+        rows[f"past: last {k} maps"] = past_trials(f, days, latest_maps(f, days, k), scoring, context,
+                                                   centred=centred)
     for name, (lo, hi) in TIME_GAPS.items():
-        rows[f"past: {name} days before"] = past_trials(f, days, maps_between(f, days, lo, hi), scoring)
+        rows[f"past: {name} days before"] = past_trials(f, days, maps_between(f, days, lo, hi), scoring,
+                                                        context, centred=centred)
     return {name: summary(results) for name, results in rows.items() if results}
 
 
@@ -295,7 +458,8 @@ def transfers(who: pd.DataFrame) -> list[str]:
     return [f"{name}: {', '.join(sorted(t))}" for name, t in teams.items() if len(t) > 1]
 
 
-def main(vectors: list[str], scoring: str) -> None:
+def main(vectors: list[str], scoring: str, context: Context | None = None, strict: bool = False,
+         centred: bool = False) -> None:
     features, match_of, who = load_fingerprints(vectors)
     z = standardise(features)
     days = who["played_on"].to_numpy(dtype="datetime64[D]")
@@ -303,10 +467,17 @@ def main(vectors: list[str], scoring: str) -> None:
     print(discriminability(z).head(10).round(2).to_string(), "\n")
     print(f"Score: {scoring}\n")
 
-    rows = {"all maps (leave-one-match-out)": summary(trials(z, other_matches(z, match_of), scoring))}
-    rows |= chronological_rows(features.loc[:, z.columns], days, match_of, scoring)
+    def run(own: OwnRows) -> list[Trial]:
+        if strict:
+            return held_out_trials(features.loc[:, z.columns], match_of, own, scoring, context,
+                                   centred=centred)
+        return trials(z, own, scoring, context, features)
+
+    rows = {"all maps (leave-one-match-out)": summary(run(other_matches(z, match_of)))}
+    rows |= chronological_rows(features.loc[:, z.columns], days, match_of, scoring, context,
+                               centred=centred)
     for name, own in {"cross-event": other_event(z, match_of), "cross-team": other_team(z, who)}.items():
-        results = trials(z, own, scoring)
+        results = run(own)
         if results:
             rows[name] = summary(results)
     report(rows, candidates=z.index.get_level_values(0).nunique())
@@ -324,5 +495,12 @@ def vectors_cli(description: str) -> argparse.ArgumentParser:
 if __name__ == "__main__":
     cli = vectors_cli("Level-1 proof test on data/fingerprints/: verification, identification, robustness.")
     cli.add_argument("--score", choices=SCORINGS, default=DEFAULT_SCORING, help="default: %(default)s")
+    cli.add_argument("--context-k", help="per-map profiles: a number, inf or buhlmann (default: global only)")
+    cli.add_argument("--strict", action="store_true", help="keep the query's match out of everything")
+    cli.add_argument("--map-centred", action="store_true", help="remove each map's average (needs --strict)")
     args = cli.parse_args()
-    main(args.vectors, args.score)
+    if args.map_centred and not args.strict:
+        cli.error("--map-centred needs --strict")
+    k = args.context_k
+    context = None if k is None else Context(buhlmann_k if k == "buhlmann" else float(k))
+    main(args.vectors, args.score, context, args.strict, args.map_centred)
