@@ -1,7 +1,7 @@
 ---
 title: Contributing workflow
 status: current
-last_reviewed: 2026-10-13
+last_reviewed: 2026-11-06
 ---
 
 # Contributing workflow
@@ -53,4 +53,4 @@ Examples:
 If your change touches a workflow, a rule, a config value or an environment variable, update the matching page under `docs/` in the same PR.
 
 ## Team memory (`CLAUDE.md`)
-The team shares context for AI assistants through a `CLAUDE.md` kept in `docs/`, updated with pushes to `dev`. See [ADR 0001](decisions/0001-shared-team-memory.md). It is agent-facing and is removed on the way to `main`, while the human docs in this tree stay.
+The team shares context for AI assistants through a `CLAUDE.md` at the repo root, updated with pushes to `dev`. See [ADR 0001](decisions/0001-shared-team-memory.md). It is agent-facing and is removed on the way to `main`, while the human docs in this tree stay. Never merge `main` back into `dev`: it would delete `CLAUDE.md` and `.claude/` from `dev`.

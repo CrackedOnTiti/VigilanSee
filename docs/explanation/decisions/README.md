@@ -12,6 +12,7 @@ One short file per decision that would be expensive to rediscover. Numbered, nev
 |------|--------------------------------------|----------|
 | [0001](0001-shared-team-memory.md) | Shared team memory via `CLAUDE.md` | accepted |
 | [0002](0002-ci-and-branch-protection.md) | CI checks and branch protection | accepted |
+| [0003](0003-demo-ingestion.md) | Demo ingestion for the beta phase | proposed |
 
 ## Template
 
