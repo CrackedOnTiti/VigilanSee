@@ -1,8 +1,8 @@
-import { init, classModule, propsModule, attributesModule, h } from "snabbdom";
+import { init, attributesModule, h } from "snabbdom";
 import logo from "./assets/logo.png";
 import "./style.css";
 
-const patch = init([classModule, propsModule, attributesModule]);
+const patch = init([attributesModule]);
 
 const DOCS_URL = "https://crackedontiti.github.io/VigilanSee/";
 const REPO_URL = "https://github.com/CrackedOnTiti/VigilanSee";

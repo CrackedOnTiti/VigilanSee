@@ -1,7 +1,7 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 
-module.exports = {
+module.exports = (env, argv) => ({
   entry: "./src/index.js",
   output: {
     path: path.resolve(__dirname, "dist"),
@@ -24,12 +24,12 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: "./public/index.html",
       title: "VigilanSee Portal",
-      favicon: "./src/assets/logo.png",
     }),
   ],
   devServer: {
     port: 3000,
     open: false,
   },
-  devtool: "source-map",
-};
+  // Source maps in development only, so they are not published with the site
+  devtool: argv.mode === "production" ? false : "source-map",
+});
