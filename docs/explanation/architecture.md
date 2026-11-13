@@ -1,7 +1,7 @@
 ---
 title: Architecture overview
 status: draft
-last_reviewed: 2026-10-13
+last_reviewed: 2026-11-13
 ---
 
 # Architecture overview
@@ -38,7 +38,16 @@ A server-side behavioural anti-cheat for Counter-Strike 2. Instead of scanning t
 Details per crate: [workspace crates](../reference/crates.md).
 
 ## Containers
-- The main VigilanSee image is built in CI (`docker.yml`).
+`docker-compose.yml` runs three containers:
+
+| Container    | Image built from     | Port (host) | Role                                              |
+|--------------|----------------------|-------------|---------------------------------------------------|
+| `vigilansee` | `./Dockerfile`       | 8080        | root binary: database setup and the Axum API      |
+| `db`         | `postgres:16`        | none        | Postgres, reachable only from the other containers |
+| `portal`     | `portal/Dockerfile`  | 3000        | web portal, static files served by nginx          |
+
+- The `vigilansee` and `portal` images are built in CI (`docker.yml`), as `build (vigilansee)` and `build (portal)`.
+- The **portal** is a static page for now (snabbdom, bundled by webpack): it has no form and makes no API call, so nothing is sent to the backend yet.
 - An **Axum container**, separate from the main one, is being set up to communicate with it. Once its Dockerfile exists, it joins the build matrix and its check becomes `build (axum)`.
 
 ## Open questions
