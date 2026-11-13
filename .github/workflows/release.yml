@@ -1,0 +1,53 @@
+name: Release dev to main
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version, e.g. v0.0.1"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  STRIP_PATHS: "CLAUDE.md .claude"
+
+jobs:
+  release-pr:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Validate version
+        run: |
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?$ ]] || { echo "Bad version: $VERSION"; exit 1; }
+
+      - name: Merge dev minus AI files
+        run: |
+          git config user.name "release-bot"
+          git config user.email "release-bot@users.noreply.github.com"
+          git checkout -b "release/$VERSION"
+          git merge --no-commit --no-ff origin/dev || true
+          git rm -rf --ignore-unmatch $STRIP_PATHS
+          if [ -n "$(git diff --name-only --diff-filter=U)" ]; then
+            echo "Real conflicts, resolve manually:"
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+          git commit -m "Release $VERSION"
+          git push origin "release/$VERSION"
+
+      - name: Open PR
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          gh pr create --base main --head "release/$VERSION" \
+            --title "Release $VERSION" \
+            --body "Automated dev to main promotion. AI config files stripped."
