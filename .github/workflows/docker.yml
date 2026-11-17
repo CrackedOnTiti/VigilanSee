@@ -22,9 +22,9 @@ jobs:
           - name: vigilansee
             context: .
             file: ./Dockerfile
-          # - name: axum
-          #   context: ./axum
-          #   file: ./axum/Dockerfile
+          - name: portal
+            context: ./portal
+            file: ./portal/Dockerfile
     steps:
       - uses: actions/checkout@v4
 

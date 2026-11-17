@@ -1,7 +1,7 @@
 ---
 title: CI workflows
 status: current
-last_reviewed: 2026-10-13
+last_reviewed: 2026-11-13
 ---
 
 # CI workflows
@@ -32,9 +32,10 @@ Notes:
 
 Builds each image listed in the matrix **without pushing it**, with layer caching. It only proves the Dockerfile builds.
 
-| Matrix entry | Context | Dockerfile      |
-|--------------|---------|-----------------|
-| `vigilansee` | `.`     | `./Dockerfile`  |
+| Matrix entry | Context    | Dockerfile           |
+|--------------|------------|----------------------|
+| `vigilansee` | `.`        | `./Dockerfile`       |
+| `portal`     | `./portal` | `./portal/Dockerfile` |
 
 The job name is pinned to `build (<matrix.name>)` so the required check does not change when paths change. See [how to add a service](#adding-a-service) below.
 
@@ -50,6 +51,8 @@ Config: `.github/dependabot.yml` (not in `workflows/`). Weekly update PRs for `c
 ## Required checks
 
 `check` and `build (vigilansee)`. See [repo rules](repo-rules.md).
+
+`build (portal)` runs but is not required yet: it becomes required once it is added to the ruleset (step 3 of [adding a service](#adding-a-service)).
 
 ## Not covered (yet)
 - Python linting and tests (no Python code yet)

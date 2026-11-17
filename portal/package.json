@@ -1,0 +1,21 @@
+{
+  "name": "vigilansee-portal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web portal for the VigilanSee API",
+  "scripts": {
+    "start": "webpack serve --mode development",
+    "build": "webpack --mode production"
+  },
+  "dependencies": {
+    "snabbdom": "^3.6.4"
+  },
+  "devDependencies": {
+    "css-loader": "^7.1.5",
+    "html-webpack-plugin": "^5.6.8",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.111.1",
+    "webpack-cli": "^7.2.3",
+    "webpack-dev-server": "^6.0.0"
+  }
+}
