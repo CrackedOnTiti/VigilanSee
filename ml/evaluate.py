@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.12,<3.14"
-# dependencies = ["pandas", "numpy"]
+# dependencies = ["pandas==3.1.1", "numpy==2.5.5"]
 # ///
 """Level-1 evaluation on data/fingerprints/ — the proof test of ADR 0012, comparable to Zhang 2026.
 
@@ -221,6 +221,27 @@ def buhlmann_k(rows: pd.DataFrame) -> pd.Series:
         within = np.average(repeated["var"], weights=repeated["size"] - 1)
         gaps = cells["mean"] - cells["p"].map(d.groupby("p")["x"].mean())
         between = np.average(gaps ** 2 - within / cells["size"], weights=cells["size"])
+        ks[feature] = within / between if between > 0 else np.inf
+    return pd.Series(ks)
+
+
+def buhlmann_straub_k(rows: pd.DataFrame) -> pd.Series:
+    """Exact Bühlmann-Straub moments. buhlmann_k subtracts s²/n from the cell gaps, but a cell belongs to
+    the player mean it is compared with: E[Σ n·gap²] = (C-1)·s² + b·(N - Σn²/N) per player."""
+    players, maps, ks = rows.index.get_level_values(0), map_names(rows.index), {}
+    for feature in rows.columns:
+        d = pd.DataFrame({"p": players, "m": maps, "x": rows[feature].to_numpy()}).dropna()
+        cells = d.groupby(["p", "m"])["x"].agg(["mean", "var", "size"]).reset_index()
+        repeated = cells[cells["size"] >= 2]
+        if repeated.empty:
+            ks[feature] = np.inf
+            continue
+        within = np.average(repeated["var"], weights=repeated["size"] - 1)
+        gaps = cells["mean"] - cells["p"].map(d.groupby("p")["x"].mean())
+        per_player = cells.assign(ssb=cells["size"] * gaps ** 2, n2=cells["size"] ** 2).groupby("p").agg(
+            ssb=("ssb", "sum"), c=("size", "size"), n=("size", "sum"), n2=("n2", "sum"))
+        between = ((per_player["ssb"].sum() - within * (per_player["c"] - 1).sum())
+                   / (per_player["n"] - per_player["n2"] / per_player["n"]).sum())
         ks[feature] = within / between if between > 0 else np.inf
     return pd.Series(ks)
 
