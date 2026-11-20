@@ -1,0 +1,41 @@
+{
+  "date": "2026-11-20",
+  "features": "habits,buy",
+  "configs": [
+    "global",
+    "k2",
+    "straub"
+  ],
+  "rows": [
+    "lomo",
+    "chrono",
+    "xteam",
+    "teammate",
+    "zhang-a",
+    "zhang-b"
+  ],
+  "pending_rows": {
+    "teammate": "issue #33"
+  },
+  "seed": 0,
+  "bootstrap_resamples": 1000,
+  "fast": false,
+  "zhang_folds": 6,
+  "git_commit": "e1dc0cd6e5aebc868e53cc0e2b1d66676569d2dc (uncommitted changes)",
+  "python": "3.12.15",
+  "numpy": "2.5.5",
+  "pandas": "3.1.1",
+  "runtime_s": 68.8,
+  "task_runtime_s": {
+    "lomo/global": 52.9,
+    "lomo/k2": 57.7,
+    "lomo/straub": 68.7,
+    "chrono/global": 35.3,
+    "chrono/k2": 50.6,
+    "chrono/straub": 51.8,
+    "xteam/global": 8.3,
+    "xteam/k2": 8.9,
+    "xteam/straub": 31.1,
+    "zhang": 22.7
+  }
+}

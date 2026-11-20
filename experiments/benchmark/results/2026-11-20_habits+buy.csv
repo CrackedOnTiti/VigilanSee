@@ -1,0 +1,58 @@
+features,evaluation,config,metric,value,player_lo,player_hi,match_lo,match_hi,queries,players,positives,negatives
+"habits,buy","Leave-one-match-out, strict",global,auc,0.976929,0.972307,0.981349,0.97157,0.981276,1311,92,,
+"habits,buy","Leave-one-match-out, strict",global,detect,0.874102,0.835045,0.909205,0.834888,0.910616,1311,92,,
+"habits,buy","Leave-one-match-out, strict",k2,auc,0.981055,0.976731,0.985088,0.977022,0.984835,1311,92,,
+"habits,buy","Leave-one-match-out, strict",k2,detect,0.906009,0.879213,0.931758,0.879586,0.928039,1311,92,,
+"habits,buy","Leave-one-match-out, strict",straub,auc,0.981341,0.977019,0.985201,0.977354,0.984956,1311,92,,
+"habits,buy","Leave-one-match-out, strict",straub,detect,0.902022,0.868278,0.929959,0.87503,0.9282,1311,92,,
+"habits,buy",Chronological (past: all maps),global,auc,0.963807,0.955822,0.970906,0.955816,0.971413,1095,92,,
+"habits,buy",Chronological (past: all maps),global,detect,0.807054,0.760867,0.855281,0.761472,0.859502,1095,92,,
+"habits,buy",Chronological (past: all maps),k2,auc,0.966322,0.958421,0.973061,0.958514,0.973998,1095,92,,
+"habits,buy",Chronological (past: all maps),k2,detect,0.810141,0.760405,0.869064,0.76453,0.871262,1095,92,,
+"habits,buy",Chronological (past: all maps),straub,auc,0.967154,0.959572,0.973864,0.959777,0.974435,1095,92,,
+"habits,buy",Chronological (past: all maps),straub,detect,0.827895,0.780444,0.877968,0.78675,0.876616,1095,92,,
+"habits,buy","Cross-team, strict",global,auc,0.923811,0.902597,0.954631,0.90334,0.943209,178,9,,
+"habits,buy","Cross-team, strict",global,detect,0.635573,0.515571,0.789129,0.496084,0.729891,178,9,,
+"habits,buy","Cross-team, strict",k2,auc,0.921222,0.900993,0.953206,0.899067,0.941503,178,9,,
+"habits,buy","Cross-team, strict",k2,detect,0.657268,0.479787,0.76682,0.48572,0.745435,178,9,,
+"habits,buy","Cross-team, strict",straub,auc,0.92605,0.905985,0.95608,0.904805,0.945457,178,9,,
+"habits,buy","Cross-team, strict",straub,detect,0.687042,0.512058,0.777843,0.488185,0.753183,178,9,,
+"habits,buy","Zhang Test A (pairwise, no profile)",any,auc,0.916609,0.901641,0.93319,,,,,13565,122085
+"habits,buy","Zhang Test A (pairwise, no profile)",any,ap,0.656648,0.611416,0.714254,,,,,13565,122085
+"habits,buy","Zhang Test A (pairwise, no profile)",any,detect,0.614973,0.557237,0.680267,,,,,13565,122085
+"habits,buy","Zhang Test B, K = 1, mean-LLR",any,auc,0.921499,0.90003,0.944367,,,,,732,2928
+"habits,buy","Zhang Test B, K = 1, mean-LLR",any,ap,0.766916,0.724671,0.834189,,,,,732,2928
+"habits,buy","Zhang Test B, K = 1, mean-LLR",any,detect,0.601372,0.474839,0.703061,,,,,732,2928
+"habits,buy","Zhang Test B, K = 1, our profile",global,auc,0.919727,0.899034,0.94144,,,,,732,2928
+"habits,buy","Zhang Test B, K = 1, our profile",global,ap,0.804791,0.766572,0.859273,,,,,732,2928
+"habits,buy","Zhang Test B, K = 1, our profile",global,detect,0.628266,0.541057,0.734587,,,,,732,2928
+"habits,buy","Zhang Test B, K = 1, our profile",k2,auc,0.919727,0.899034,0.94144,,,,,732,2928
+"habits,buy","Zhang Test B, K = 1, our profile",k2,ap,0.804791,0.766572,0.859273,,,,,732,2928
+"habits,buy","Zhang Test B, K = 1, our profile",k2,detect,0.628266,0.541057,0.734587,,,,,732,2928
+"habits,buy","Zhang Test B, K = 1, our profile",straub,auc,0.919727,0.899034,0.94144,,,,,732,2928
+"habits,buy","Zhang Test B, K = 1, our profile",straub,ap,0.804791,0.766572,0.859273,,,,,732,2928
+"habits,buy","Zhang Test B, K = 1, our profile",straub,detect,0.628266,0.541057,0.734587,,,,,732,2928
+"habits,buy","Zhang Test B, K = 3, mean-LLR",any,auc,0.958926,0.946174,0.974001,,,,,732,2928
+"habits,buy","Zhang Test B, K = 3, mean-LLR",any,ap,0.879639,0.843481,0.926023,,,,,732,2928
+"habits,buy","Zhang Test B, K = 3, mean-LLR",any,detect,0.810167,0.750987,0.875916,,,,,732,2928
+"habits,buy","Zhang Test B, K = 3, our profile",global,auc,0.965052,0.953,0.976673,,,,,732,2928
+"habits,buy","Zhang Test B, K = 3, our profile",global,ap,0.895461,0.859689,0.935773,,,,,732,2928
+"habits,buy","Zhang Test B, K = 3, our profile",global,detect,0.821595,0.764774,0.890107,,,,,732,2928
+"habits,buy","Zhang Test B, K = 3, our profile",k2,auc,0.966198,0.955642,0.977365,,,,,732,2928
+"habits,buy","Zhang Test B, K = 3, our profile",k2,ap,0.901949,0.873409,0.939316,,,,,732,2928
+"habits,buy","Zhang Test B, K = 3, our profile",k2,detect,0.822432,0.770134,0.897099,,,,,732,2928
+"habits,buy","Zhang Test B, K = 3, our profile",straub,auc,0.967109,0.955882,0.978218,,,,,732,2928
+"habits,buy","Zhang Test B, K = 3, our profile",straub,ap,0.904338,0.873689,0.940509,,,,,732,2928
+"habits,buy","Zhang Test B, K = 3, our profile",straub,detect,0.828772,0.771245,0.901105,,,,,732,2928
+"habits,buy","Zhang Test B, K = 5, mean-LLR",any,auc,0.961843,0.947745,0.976836,,,,,732,2928
+"habits,buy","Zhang Test B, K = 5, mean-LLR",any,ap,0.886563,0.851876,0.935424,,,,,732,2928
+"habits,buy","Zhang Test B, K = 5, mean-LLR",any,detect,0.82088,0.754564,0.885317,,,,,732,2928
+"habits,buy","Zhang Test B, K = 5, our profile",global,auc,0.969163,0.956577,0.979313,,,,,732,2928
+"habits,buy","Zhang Test B, K = 5, our profile",global,ap,0.912081,0.883228,0.944612,,,,,732,2928
+"habits,buy","Zhang Test B, K = 5, our profile",global,detect,0.847147,0.774455,0.897884,,,,,732,2928
+"habits,buy","Zhang Test B, K = 5, our profile",k2,auc,0.971262,0.959824,0.981103,,,,,732,2928
+"habits,buy","Zhang Test B, K = 5, our profile",k2,ap,0.917167,0.888781,0.949245,,,,,732,2928
+"habits,buy","Zhang Test B, K = 5, our profile",k2,detect,0.853696,0.789737,0.909691,,,,,732,2928
+"habits,buy","Zhang Test B, K = 5, our profile",straub,auc,0.97226,0.960857,0.981602,,,,,732,2928
+"habits,buy","Zhang Test B, K = 5, our profile",straub,ap,0.921255,0.893394,0.950897,,,,,732,2928
+"habits,buy","Zhang Test B, K = 5, our profile",straub,detect,0.863689,0.798197,0.916709,,,,,732,2928

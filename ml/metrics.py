@@ -65,6 +65,56 @@ def bootstrap_ci(results: list[Trial]) -> dict[str, str]:
     return {"detect CI": f"{d_lo:.0%}–{d_hi:.0%}", "auc CI": f"{a_lo:.3f}–{a_hi:.3f}"}
 
 
+class Ranked:
+    """One set of scored pairs, sorted once so that each bootstrap weighting is a linear pass."""
+
+    def __init__(self, similarity: np.ndarray, same: np.ndarray):
+        self.order = np.argsort(-similarity, kind="stable")
+        self.similarity, self.same = similarity[self.order], same[self.order]
+        self.starts = np.flatnonzero(np.r_[True, self.similarity[1:] != self.similarity[:-1]])
+
+    def metrics(self, weights: np.ndarray) -> tuple[float, float, float]:
+        """AUC (ties count half), AP (one step per distinct score), detect@5%. Integer weights give what
+        metrics.py would on the pairs repeated that many times."""
+        w = weights[self.order]
+        positive = np.add.reduceat(w * self.same, self.starts)
+        negative = np.add.reduceat(w * ~self.same, self.starts)
+        p, n = positive.sum(), negative.sum()
+        if p == 0 or n == 0:
+            return np.nan, np.nan, np.nan
+        tp, fp = np.cumsum(positive), np.cumsum(negative)
+        area = (negative * (tp - positive / 2)).sum() / (p * n)
+        hit = positive > 0
+        precision = (positive[hit] * tp[hit] / (tp[hit] + fp[hit])).sum() / p
+        return area, precision, self.detection(w, n)
+
+    def detection(self, w: np.ndarray, negatives: float) -> float:
+        """Impostors flagged at the distance np.quantile would give on the repeated genuine distances."""
+        genuine = w[self.same] > 0
+        distance, count = -self.similarity[self.same][genuine], np.cumsum(w[self.same][genuine])
+        position = (count[-1] - 1) * (1 - FALSE_ALARMS)
+        low = int(position)
+        at = np.minimum(np.searchsorted(count, [low, low + 1], side="right"), len(count) - 1)
+        threshold = distance[at[0]] + (position - low) * (distance[at[1]] - distance[at[0]])
+        return w[~self.same & (-self.similarity > threshold)].sum() / negatives
+
+
+def cluster_bootstrap(results: list[Trial], unit_of: list, resamples: int, seed: int = SEED) -> np.ndarray:
+    """(resample, [AUC, AP, detect@5%]) of `results` with whole clusters redrawn: unit_of[i] is the cluster
+    (query player, query match...) of trial i, drawn with replacement as bootstrap_ci draws players. Each
+    trial weighs as often as its cluster is drawn, which Ranked turns into one linear pass per resample."""
+    similarity = -np.concatenate([np.r_[d[player], d.drop(player).to_numpy()] for player, d in results])
+    same = np.concatenate([np.r_[True, np.zeros(len(d) - 1, dtype=bool)] for _, d in results])
+    units, cluster = np.unique(np.array(unit_of, dtype=object).astype(str), return_inverse=True)
+    entry_cluster = np.repeat(cluster, [len(d) for _, d in results])
+    ranked, rng = Ranked(similarity, same), np.random.default_rng(seed)
+    drawn = np.empty((resamples, 3))
+    for r in range(resamples):
+        counts = np.bincount(rng.choice(len(units), len(units)), minlength=len(units)).astype(float)
+        drawn[r] = ranked.metrics(counts[entry_cluster])
+    return drawn
+
+
 def summary(results: list[Trial]) -> dict:
     """All metrics of one set of trials, plus how many players / query maps they rest on."""
     genuine, impostor = split_scores(results)

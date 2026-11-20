@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.12,<3.14"
-# dependencies = ["pandas", "numpy"]
+# dependencies = ["pandas==3.1.1", "numpy==2.5.5"]
 # ///
 """Context effects on a fingerprint: does it measure the player, or his map / team?
 
